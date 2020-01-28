@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">GlobeKeeperUploader</string>
+    <string name="select_files">Select File(s)</string>
+    <string name="choose">Choose</string>
+    <string name="cancel">Cancel</string>
+    <string name="unable_to_check_file_size">Unable to check file size, choose another files</string>
+    <string name="max_file_size_is">Max file size is %d MB</string>
+    <string name="processing_uploads">Processing uploads</string>
+    <string name="back_slash">/</string>
+    <string name="nothing_is_chosed">No files are selected, choose some for upload</string>
+    <plurals name="you_cannot_select_more_than">
+        <item quantity="one">You cannot select more than %d file</item>
+        <item quantity="other">You cannot select more than %d files</item>
+    </plurals>
+</resources>
