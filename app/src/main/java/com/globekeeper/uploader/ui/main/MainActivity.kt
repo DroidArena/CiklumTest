@@ -42,7 +42,7 @@ class MainActivity : DaggerAppCompatActivity(), AlertFragment.FileChooser, Uploa
             when (it) {
                 is Resource.Success -> validateAndScheduleUploadInfos(it.data)
                 is Resource.Failure -> {
-                    Log.e(TAG, "exception occured while trying to get files info ${it.e.message}", it.e.cause)
+                    Log.e(TAG, "exception occured while trying to get files info ${it.e.message}", it.e)
                 }
             }
         })
@@ -53,7 +53,7 @@ class MainActivity : DaggerAppCompatActivity(), AlertFragment.FileChooser, Uploa
                     Log.e(
                         TAG,
                         "exception occured while trying to get files info ${it.e.message}",
-                        it.e.cause
+                        it.e
                     )
                 }
             }
