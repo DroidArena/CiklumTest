@@ -1,6 +1,5 @@
 package com.globekeeper.uploader
 
-import com.facebook.stetho.Stetho
 import com.globekeeper.uploader.di.AppComponent
 import com.globekeeper.uploader.di.DaggerAppComponent
 import com.globekeeper.uploader.di.RealAppComponent
@@ -13,14 +12,6 @@ class MyApp: DaggerApplication(), RealAppComponentProvider {
 
     override val component: RealAppComponent
         get() = appInjector
-
-    override fun onCreate() {
-        super.onCreate()
-
-        if (BuildConfig.DEBUG) {
-            Stetho.initializeWithDefaults(this)
-        }
-    }
 
     override fun applicationInjector(): AndroidInjector<out DaggerApplication> {
         val component = DaggerAppComponent

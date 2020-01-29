@@ -23,12 +23,6 @@ object NetworkModule {
            .connectTimeout(Constants.CONNECTION_TIMEOUT, TimeUnit.MILLISECONDS)
            .readTimeout(Constants.CONNECTION_TIMEOUT, TimeUnit.MILLISECONDS)
            .writeTimeout(Constants.CONNECTION_TIMEOUT, TimeUnit.MILLISECONDS)
-//           .addInterceptor(HttpLoggingInterceptor().apply {
-//               level = HttpLoggingInterceptor.Level.HEADERS
-//           })
-//        if (BuildConfig.DEBUG) {
-//            builder.addNetworkInterceptor(StethoInterceptor())
-//        }
         return builder.build()
     }
 
