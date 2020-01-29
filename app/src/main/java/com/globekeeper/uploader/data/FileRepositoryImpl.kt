@@ -1,6 +1,62 @@
 package com.globekeeper.uploader.data
 
-import android.content.Context
+import android.content.ContentResolver
+import android.net.Uri
+import com.globekeeper.uploader.data.api.Api
+import com.globekeeper.uploader.data.models.FileInfo
+import com.globekeeper.uploader.data.storage.Storage
+import com.globekeeper.uploader.errors.UploadException
+import com.globekeeper.uploader.utils.InputStreamRequestBody
+import com.google.gson.Gson
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.buffer
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.flowOn
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
 
-class FileRepositoryImpl(private val context: Context): FileRepository {
+class FileRepositoryImpl(private val contentResolver: ContentResolver,
+                         private val api: Api,
+                         private val storage: Storage,
+                         private val gson: Gson
+): FileRepository {
+    companion object {
+        private const val FILE_NAME_FIELD = "upload"
+    }
+
+    private data class DataModel(val name: String)
+    private data class RequestModel(val data: DataModel)
+
+    @ExperimentalCoroutinesApi
+    override suspend fun upload(uri: Uri, name: String, size: Long) = callbackFlow {
+        val nameRequestBody = gson.toJson(RequestModel(DataModel(name)))
+            .toRequestBody("application/json".toMediaType())
+
+        val fileRequestBody = MultipartBody.Part.createFormData(FILE_NAME_FIELD, name,
+            InputStreamRequestBody(uri, size, contentResolver, object: InputStreamRequestBody.Listener {
+                override fun onRequestProgress(
+                    bytesWritten: Long,
+                    contentLength: Long
+                ) {
+                    offer((bytesWritten * 100 / contentLength).toInt())
+                }
+            }
+        ))
+        val response = api.uploadFile(
+            fileRequestBody,
+            nameRequestBody)
+
+        offer(100)
+
+        if (response.code() != 204) {
+            throw UploadException(response.code(), "Unknown server response")
+        }
+    }.flowOn(Dispatchers.IO)
+    .buffer(128)
+
+    override suspend fun getFilesInfo(uris: List<Uri>): List<FileInfo> {
+        return storage.getFileInfos(uris)
+    }
 }

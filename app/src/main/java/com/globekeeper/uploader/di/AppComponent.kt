@@ -14,10 +14,9 @@ import javax.inject.Singleton
         AndroidSupportInjectionModule::class,
         AppModule::class,
         ActivityBindingModule::class,
-        ViewModelModule::class,
-        RepositoryModule::class]
+        ViewModelModule::class]
 )
-interface AppComponent : AndroidInjector<MyApp> {
+interface AppComponent : AndroidInjector<MyApp>, RealAppComponent {
     @Component.Builder
     interface Builder {
         @BindsInstance

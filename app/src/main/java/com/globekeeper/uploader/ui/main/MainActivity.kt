@@ -4,25 +4,78 @@ import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.provider.OpenableColumns
-import androidx.core.os.bundleOf
+import android.util.Log
+import androidx.activity.viewModels
+import androidx.fragment.app.commit
+import androidx.lifecycle.Observer
+import androidx.work.WorkManager
 import com.globekeeper.uploader.Constants
 import com.globekeeper.uploader.R
+import com.globekeeper.uploader.di.ViewModelFactory
+import com.globekeeper.uploader.domain.models.UploadInfoDomainModel
+import com.globekeeper.uploader.ui.upload.UploaderFragment
+import com.globekeeper.uploader.ui.utils.Resource
+import com.globekeeper.uploader.ui.utils.hasNotCancelledWorkers
+import com.globekeeper.uploader.workers.UploadWorker
 import dagger.android.support.DaggerAppCompatActivity
-import java.util.ArrayList
+import javax.inject.Inject
 
-class MainActivity : DaggerAppCompatActivity(), AlertFragment.FileChooser {
+class MainActivity : DaggerAppCompatActivity(), AlertFragment.FileChooser, UploaderFragment.UploaderHost {
+    private var selectedUris: List<Uri>? = null
+
     companion object {
+        private val TAG = MainActivity::class.java.simpleName
         private const val PICK_FILE_REQUEST = 1
     }
+
+    @Inject
+    lateinit var viewModelFactory: ViewModelFactory
+
+    private val viewModel by viewModels<MainViewModel> { viewModelFactory }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContentView(R.layout.main_activity)
 
+        viewModel.uploadInfoEvent.observe(this, Observer {
+            when (it) {
+                is Resource.Success -> validateAndScheduleUploadInfos(it.data)
+                is Resource.Failure -> {
+                    Log.e(TAG, "exception occured while trying to get files info ${it.e.message}", it.e.cause)
+                }
+            }
+        })
+        viewModel.uploadsScheduledEvent.observe(this, Observer {
+            when (it) {
+                is Resource.Success -> showUploader()
+                is Resource.Failure -> {
+                    Log.e(
+                        TAG,
+                        "exception occured while trying to get files info ${it.e.message}",
+                        it.e.cause
+                    )
+                }
+            }
+        })
         if (savedInstanceState == null) {
-            showFileChooser()
+            if (WorkManager.getInstance(this).hasNotCancelledWorkers(UploadWorker.TAG)) {
+                showUploader()
+            } else {
+                //if all workers are complete (or cancelled) then cleanup all workers info and allow user to choose new files
+                viewModel.cancelAllUploads()
+
+                showFileChooser()
+            }
+        }
+    }
+
+    private fun validateAndScheduleUploadInfos(uploadInfos: List<UploadInfoDomainModel>) {
+        val maxFileSizeBytes = Constants.MAX_TOTAL_SIZE_MB * 1024 * 1024
+        if (uploadInfos.any { it.size > maxFileSizeBytes }) {
+            showAlert(getString(R.string.max_file_size_is, Constants.MAX_TOTAL_SIZE_MB))
+        } else {
+            viewModel.scheduleUploads(uploadInfos)
         }
     }
 
@@ -45,26 +98,19 @@ class MainActivity : DaggerAppCompatActivity(), AlertFragment.FileChooser {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         when (requestCode) {
             PICK_FILE_REQUEST -> {
-                if (requestCode == Activity.RESULT_OK && data != null) {
-                    val uris = data.clipData?.let { clipData ->
-                        val list = arrayListOf<Uri>()
+                //postpone processing URIs to onResume to avoid fragment transaction exceptions
+                selectedUris = if (resultCode == Activity.RESULT_OK && data != null) {
+                    data.clipData?.let { clipData ->
+                        val list = mutableListOf<Uri>()
                         for (i in 0 until clipData.itemCount) {
                             list.add(clipData.getItemAt(i).uri)
                         }
-                        if (list.isEmpty()) {
-                            showAlert(getString(R.string.nothing_is_chosed))
-                            return
-                        }
                         list
-                    } ?: if (data.data != null) {
-                        arrayListOf(data.data)
-                    } else {
-                        showAlert(getString(R.string.nothing_is_chosed))
-                        return
-                    }
-                    processUrisAndShowUploader(uris)
+                    }?:data.data?.let {
+                        listOf(it)
+                    }?:emptyList()
                 } else {
-                    showAlert(getString(R.string.nothing_is_chosed))
+                    emptyList()
                 }
                 return
             }
@@ -72,7 +118,21 @@ class MainActivity : DaggerAppCompatActivity(), AlertFragment.FileChooser {
         super.onActivityResult(requestCode, resultCode, data)
     }
 
-    private fun processUrisAndShowUploader(uris: ArrayList<Uri>) {
+    override fun onResume() {
+        super.onResume()
+
+        selectedUris?.let { uris ->
+            selectedUris = null
+
+            processSelectedFiles(uris)
+        }
+    }
+
+    private fun processSelectedFiles(uris: List<Uri>) {
+        if (uris.isEmpty()) {
+            showAlert(getString(R.string.no_files_are_selected))
+            return
+        }
         if (uris.size > Constants.MAX_FILES) {
             showAlert(resources.getQuantityString(
                 R.plurals.you_cannot_select_more_than,
@@ -81,30 +141,25 @@ class MainActivity : DaggerAppCompatActivity(), AlertFragment.FileChooser {
             ))
             return
         }
-        val sizes = uris.mapNotNull { uri ->
-            contentResolver.query(uri, null, null, null, null)
-                ?.use { c ->
-                    if (c.moveToFirst()) {
-                        val sizeIndex = c.getColumnIndex(OpenableColumns.SIZE)
-                        if (!c.isNull(sizeIndex)) c.getLong(sizeIndex) else null
-                    } else {
-                        null
-                    }
-                }
+        viewModel.createUploadInfos(uris)
+    }
+
+    private fun showUploader() {
+        supportFragmentManager.commit {
+            replace(R.id.container, UploaderFragment.newInstance())
         }
-        if (sizes.size < uris.size) {
-            showAlert(getString(R.string.unable_to_check_file_size))
-            return
-        }
-        val maxFileSizeBytes = Constants.MAX_TOTAL_SIZE_MB * 1024 * 1024
-        if (sizes.any { it > maxFileSizeBytes }) {
-            showAlert(getString(R.string.max_file_size_is, Constants.MAX_TOTAL_SIZE_MB))
-            return
-        }
-        UploaderFragment.newInstance(uris).show(supportFragmentManager, "uploader")
     }
 
     private fun showAlert(error: String) {
         AlertFragment.newInstance(error).show(supportFragmentManager, "alert")
+    }
+
+    override fun onUploadsCleaned() {
+        supportFragmentManager.findFragmentById(R.id.container)?.let { fragment ->
+            supportFragmentManager.commit {
+                remove(fragment)
+            }
+        }
+        showFileChooser()
     }
 }

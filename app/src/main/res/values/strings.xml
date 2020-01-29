@@ -3,11 +3,15 @@
     <string name="select_files">Select File(s)</string>
     <string name="choose">Choose</string>
     <string name="cancel">Cancel</string>
-    <string name="unable_to_check_file_size">Unable to check file size, choose another files</string>
     <string name="max_file_size_is">Max file size is %d MB</string>
     <string name="processing_uploads">Processing uploads</string>
     <string name="back_slash">/</string>
-    <string name="nothing_is_chosed">No files are selected, choose some for upload</string>
+    <string name="no_files_are_selected">No files are selected, choose some for upload</string>
+    <string name="retry">Retry</string>
+    <string name="fmt_progress_counter">%d/%d</string>
+    <string name="upload_complete">Upload complete</string>
+    <string name="fmt_failed_count">(%d failed)</string>
+    <string name="clear_all">Clear all</string>
     <plurals name="you_cannot_select_more_than">
         <item quantity="one">You cannot select more than %d file</item>
         <item quantity="other">You cannot select more than %d files</item>

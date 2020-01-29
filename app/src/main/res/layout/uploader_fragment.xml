@@ -4,9 +4,9 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/main"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+    android:layout_height="match_parent"
     android:orientation="vertical"
-    tools:context=".ui.main.UploaderFragment">
+    tools:context=".ui.upload.UploaderFragment">
 
     <RelativeLayout
         android:layout_width="match_parent"
@@ -15,6 +15,7 @@
         android:paddingBottom="16dp"
         android:paddingStart="20dp"
         android:paddingEnd="20dp"
+        android:orientation="horizontal"
         android:background="@color/uploader_header">
 
         <TextView
@@ -27,46 +28,34 @@
             />
 
         <TextView
-            android:id="@+id/countComplete"
+            android:id="@+id/countProgress"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/processing_uploads"
             android:textSize="16sp"
-            android:layout_toEndOf="@id/processLabel"
-            android:textColor="@color/cyan"
+            android:textColor="@color/state_color_cyan_red"
             android:layout_marginStart="5dp"
             android:textStyle="bold"
-            tools:text="1"
+            android:layout_toEndOf="@id/processLabel"
+            tools:text="1/4"
             />
 
         <TextView
-            android:id="@+id/sep"
+            android:id="@+id/clearAll"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/back_slash"
-            android:textSize="16sp"
-            android:textColor="@color/cyan"
-            android:layout_toEndOf="@id/countComplete"
-            />
-
-        <TextView
-            android:id="@+id/countTotal"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textSize="16sp"
-            android:layout_toEndOf="@id/sep"
-            android:textColor="@color/dark_cyan"
-            tools:text="4"
-            />
-
-
+            android:textSize="14sp"
+            android:textColor="@color/white"
+            android:text="@string/clear_all"
+            android:layout_alignParentEnd="true" />
     </RelativeLayout>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/files"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
+        android:listDivider="@drawable/divider_grey_1dp"
         app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-        android:orientation="vertical" />
+        android:orientation="vertical"
+        tools:listitem="@layout/item_file"/>
 
 </LinearLayout>
