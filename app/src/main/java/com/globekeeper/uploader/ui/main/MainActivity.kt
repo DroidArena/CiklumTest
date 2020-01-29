@@ -13,6 +13,7 @@ import com.globekeeper.uploader.Constants
 import com.globekeeper.uploader.R
 import com.globekeeper.uploader.di.ViewModelFactory
 import com.globekeeper.uploader.domain.models.UploadInfoDomainModel
+import com.globekeeper.uploader.ui.common.AlertFragment
 import com.globekeeper.uploader.ui.upload.UploaderFragment
 import com.globekeeper.uploader.ui.utils.Resource
 import com.globekeeper.uploader.ui.utils.hasNotCancelledWorkers

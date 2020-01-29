@@ -1,4 +1,4 @@
-package com.globekeeper.uploader.ui.main
+package com.globekeeper.uploader.ui.common
 
 import android.app.Dialog
 import android.content.Context
