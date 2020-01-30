@@ -8,9 +8,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 class StorageImpl(private val contentResolver: ContentResolver): Storage {
-    override suspend fun getFileInfos(uris: List<Uri>): List<FileInfo> {
+    override suspend fun getFileInfos(uris: List<String>): List<FileInfo> {
         return withContext(Dispatchers.IO) {
-            uris.mapNotNull { uri ->
+            uris.mapNotNull { uriStr ->
+                val uri = Uri.parse(uriStr)
                 contentResolver.query(uri, null, null, null, null)
                     ?.use { c ->
                         if (!c.moveToFirst()) return@use null
@@ -27,7 +28,7 @@ class StorageImpl(private val contentResolver: ContentResolver): Storage {
                         if (filename == null) return@use null
 
                         FileInfo(
-                            uri,
+                            uriStr,
                             filename,
                             c.getLong(sizeIndex)
                         )

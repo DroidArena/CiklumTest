@@ -73,7 +73,11 @@ class UploaderFragment : DaggerFragment(), UploadAdapter.ItemClickListener {
         super.onActivityCreated(savedInstanceState)
 
         viewModel.fileInfoLiveData.observe(viewLifecycleOwner, Observer {
-            updateUi(it)
+            if (it.isNotEmpty()) {
+                updateUi(it)
+            } else {
+                uploaderHost?.onUploadsCleaned()
+            }
         })
     }
 

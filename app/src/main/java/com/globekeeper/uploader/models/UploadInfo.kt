@@ -1,8 +1,6 @@
 package com.globekeeper.uploader.models
 
-import android.net.Uri
-
-data class UploadInfo(val uri: Uri,
+data class UploadInfo(val uri: String,
                       val name: String,
                       val size: Long,
                       val state: State = State.ACTIVE,

@@ -38,6 +38,13 @@ class AlertFragment : DialogFragment() {
         fileChooser = null
     }
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        if (savedInstanceState == null) {
+            isCancelable = false
+        }
+        super.onCreate(savedInstanceState)
+    }
+
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         return AlertDialog.Builder(requireContext())
             .setMessage(arguments?.getString(ARG_MESSAGE))

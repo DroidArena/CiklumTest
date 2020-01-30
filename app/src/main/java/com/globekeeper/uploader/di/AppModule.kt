@@ -58,7 +58,9 @@ object AppModule {
         return UploadInteractorImpl(
             workManager,
             fileRepository,
-            appDatabase
+            appDatabase,
+            10,
+            10
         )
     }
 }

@@ -10,9 +10,11 @@ import com.globekeeper.uploader.utils.InputStreamRequestBody
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.isActive
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -34,29 +36,40 @@ class FileRepositoryImpl(private val contentResolver: ContentResolver,
         val nameRequestBody = gson.toJson(RequestModel(DataModel(name)))
             .toRequestBody("application/json".toMediaType())
 
-        val fileRequestBody = MultipartBody.Part.createFormData(FILE_NAME_FIELD, name,
-            InputStreamRequestBody(uri, size, contentResolver, object: InputStreamRequestBody.Listener {
-                override fun onRequestProgress(
-                    bytesWritten: Long,
-                    contentLength: Long
-                ) {
+        val fileRequestBody = InputStreamRequestBody(uri, size, contentResolver, object: InputStreamRequestBody.Listener {
+            override fun onRequestProgress(
+                bytesWritten: Long,
+                contentLength: Long
+            ): Boolean {
+                return if (this@callbackFlow.isActive) {
                     offer((bytesWritten * 100 / contentLength).toInt())
+                    true
+                } else {
+                    false
                 }
             }
-        ))
-        val response = api.uploadFile(
-            fileRequestBody,
-            nameRequestBody)
+        })
+        val filePart = MultipartBody.Part.createFormData(FILE_NAME_FIELD, name, fileRequestBody)
+        try {
+            val response = api.uploadFile(
+                filePart,
+                nameRequestBody
+            )
+            offer(100)
 
-        offer(100)
-
-        if (response.code() != 204) {
-            throw UploadException(response.code(), "Unknown server response")
+            if (response.code() != 204) {
+                throw UploadException(response.code(), "Unknown server response")
+            }
+            close()
+        } catch (t: Throwable) {
+            close(t)
         }
+        awaitClose { fileRequestBody.progressListener = null }
     }.flowOn(Dispatchers.IO)
     .buffer(128)
 
-    override suspend fun getFilesInfo(uris: List<Uri>): List<FileInfo> {
+
+    override suspend fun getFilesInfo(uris: List<String>): List<FileInfo> {
         return storage.getFileInfos(uris)
     }
 }

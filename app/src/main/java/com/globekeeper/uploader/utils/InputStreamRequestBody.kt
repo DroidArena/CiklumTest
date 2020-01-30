@@ -15,7 +15,7 @@ class InputStreamRequestBody(
     private val uri: Uri,
     private val length: Long,
     private val contentResolver: ContentResolver,
-    private val progressListener: Listener? = null
+    var progressListener: Listener? = null
 ) : RequestBody() {
     companion object {
         private const val BUFFER_SIZE = 8192L
@@ -44,7 +44,9 @@ class InputStreamRequestBody(
                     remaining = max(0, remaining - size)
                     size = min(BUFFER_SIZE, remaining)
 
-                    progressListener.onRequestProgress(length - remaining, length)
+                    if (progressListener?.onRequestProgress(length - remaining, length) == false) {
+                        break
+                    }
                 }
             } else {
                 sink.writeAll(source)
@@ -53,6 +55,6 @@ class InputStreamRequestBody(
     }
 
     interface Listener {
-        fun onRequestProgress(bytesWritten: Long, contentLength: Long)
+        fun onRequestProgress(bytesWritten: Long, contentLength: Long): Boolean
     }
 }

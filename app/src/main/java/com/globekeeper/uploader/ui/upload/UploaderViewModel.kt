@@ -1,7 +1,5 @@
 package com.globekeeper.uploader.ui.upload
 
-import android.content.Context
-import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.liveData
@@ -18,7 +16,7 @@ import javax.inject.Inject
 
 class UploaderViewModel @Inject constructor(
     private val uploadInteractor: UploadInteractor,
-    private val context: Context
+    workManager: WorkManager
 ) : ViewModel() {
     companion object {
         private val TAG = UploaderViewModel::class.java.simpleName
@@ -27,13 +25,13 @@ class UploaderViewModel @Inject constructor(
     /**
      * Provides uploads list for UI
      *
-     * [UploadInteractor.loadAllByIds] gets upload info from database and
+     * [UploadInteractor.loadAllByUUIDs] gets upload info from database and
      * only assists to info from work manager. This assistant needed because
      * [UploadWorker] input params are not available from [WorkInfo],
      * at least until work is started, then we can set data in workInfo.progress,
      * but worker could be in just queued state for some time
      */
-    val fileInfoLiveData = WorkManager.getInstance(context)
+    val fileInfoLiveData = workManager
         .getWorkInfosByTagLiveData(UploadWorker.TAG)
         .switchMap { workInfos ->
             val nonCancelledWorkInfos = workInfos.filter {
@@ -41,7 +39,7 @@ class UploaderViewModel @Inject constructor(
             }
             liveData(viewModelScope.coroutineContext) {
                 val nonCancelledWorkInfosIds = nonCancelledWorkInfos.map { it.id }
-                val uploadDomainModels = uploadInteractor.loadAllByIds(nonCancelledWorkInfosIds)
+                val uploadDomainModels = uploadInteractor.loadAllByUUIDs(nonCancelledWorkInfosIds)
                 val uploadInfos = uploadDomainModels.mapNotNull { info ->
                     val workInfo = nonCancelledWorkInfos.firstOrNull { it.id == info.uuid }
                         ?: return@mapNotNull null
@@ -64,10 +62,16 @@ class UploaderViewModel @Inject constructor(
         }
 
     fun retry(item: UploadInfo) {
-        UploadWorker.scheduleJob(context, UploadInfoDomainModel(item.uri, item.name, item.size))
+        viewModelScope.launch {
+            try {
+                uploadInteractor.scheduleUploads(listOf(UploadInfoDomainModel(item.uri, item.name, item.size)))
+            } catch (e: Exception) {
+                Log.e(TAG, "fail to remove upload record ${e.message}", e)
+            }
+        }
     }
 
-    fun remove(uri: Uri) {
+    fun remove(uri: String) {
         viewModelScope.launch {
             try {
                 uploadInteractor.remove(uri)

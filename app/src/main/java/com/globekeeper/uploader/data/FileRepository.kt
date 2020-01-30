@@ -6,5 +6,5 @@ import kotlinx.coroutines.flow.Flow
 
 interface FileRepository {
     suspend fun upload(uri: Uri, name: String, size: Long): Flow<Int>
-    suspend fun getFilesInfo(uris: List<Uri>): List<FileInfo>
+    suspend fun getFilesInfo(uris: List<String>): List<FileInfo>
 }

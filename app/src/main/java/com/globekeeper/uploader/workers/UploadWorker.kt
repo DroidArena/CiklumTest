@@ -4,21 +4,20 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import androidx.work.*
-import com.globekeeper.uploader.data.FileRepository
 import com.globekeeper.uploader.di.RealAppComponentProvider
+import com.globekeeper.uploader.domain.UploadInteractor
 import com.globekeeper.uploader.domain.models.UploadInfoDomainModel
 import com.globekeeper.uploader.errors.UploadException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collect
 import retrofit2.HttpException
-import java.util.*
 import javax.inject.Inject
 
 class UploadWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override val coroutineContext = Dispatchers.IO
 
     @Inject
-    lateinit var fileRepository: FileRepository
+    lateinit var uploadInteractor: UploadInteractor
 
     init {
         (context.applicationContext as RealAppComponentProvider).component.inject(this)
@@ -37,7 +36,7 @@ class UploadWorker(context: Context, params: WorkerParameters) : CoroutineWorker
         val uri = Uri.parse(uriStr)
 
         return try {
-            fileRepository.upload(uri, name, size)
+            uploadInteractor.upload(uri, name, size)
                 .collect { progress ->
                     setProgress(Data.Builder()
                        .putInt(ARG_PROGRESS, progress)
@@ -69,10 +68,8 @@ class UploadWorker(context: Context, params: WorkerParameters) : CoroutineWorker
         private const val ARG_NAME = "name"
         private const val ARG_SIZE = "size"
 
-        fun scheduleJob(context: Context, uploadInfo: UploadInfoDomainModel): UUID {
-            val uriStr = uploadInfo.uri.toString()
-
-            val request = OneTimeWorkRequestBuilder<UploadWorker>()
+        fun makeRequest(uploadInfo: UploadInfoDomainModel): OneTimeWorkRequest {
+            return OneTimeWorkRequestBuilder<UploadWorker>()
                 .addTag(TAG)
                 .setConstraints(
                     Constraints.Builder()
@@ -81,19 +78,12 @@ class UploadWorker(context: Context, params: WorkerParameters) : CoroutineWorker
                 )
                 .setInputData(
                     Data.Builder()
-                        .putString(ARG_URI, uriStr)
+                        .putString(ARG_URI, uploadInfo.uri)
                         .putString(ARG_NAME, uploadInfo.name)
                         .putLong(ARG_SIZE, uploadInfo.size)
                         .build()
                 )
                 .build()
-
-            WorkManager.getInstance(context.applicationContext).enqueueUniqueWork(
-                uriStr,
-                ExistingWorkPolicy.KEEP,
-                request
-            )
-            return request.id
         }
     }
 }

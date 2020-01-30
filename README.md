@@ -2,6 +2,9 @@
 
 * Tested on Android tablet (6.0), phone (9.0)
 
+# Notices
+- files multi selection is done by long tapping on images in file chooser
+
 # Extra features:
 - uploads persist over app restart (but not upload progress)
 - while offline, uploads will wait until internet is connected
